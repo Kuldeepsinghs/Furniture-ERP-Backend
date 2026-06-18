@@ -19,7 +19,7 @@ public class CorsConfig {
 
         configuration.setAllowedOrigins(
                 List.of("http://localhost:5173",
-                		"https://furniture-erp-frontend.vercel.app"
+                		"https://*.vercel.app"
                 		));
 
         configuration.setAllowedMethods(
