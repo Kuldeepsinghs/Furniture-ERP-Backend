@@ -26,27 +26,38 @@ public class DataInitializer
     }
 
     @Override
-    public void run(String... args)
-            throws Exception {
+    public void run(String... args) throws Exception {
 
-        if (userRepository.findByUsername("admin")
-                .isEmpty()) {
+        if (userRepository.findByUsername("admin").isEmpty()) {
 
             User admin = new User();
 
             admin.setUsername("admin");
 
             admin.setPassword(
-                    passwordEncoder.encode(
-                            "admin123"));
+                    passwordEncoder.encode("admin123"));
 
-            admin.setRole(
-                    UserRole.ADMIN);
+            admin.setRole(UserRole.ADMIN);
 
-            admin.setStatus(
-                    Status.ACTIVE);
+            admin.setStatus(Status.ACTIVE);
 
             userRepository.save(admin);
+        }
+
+        if (userRepository.findByUsername("viewer").isEmpty()) {
+
+            User viewer = new User();
+
+            viewer.setUsername("viewer");
+
+            viewer.setPassword(
+                    passwordEncoder.encode("furniture@2026"));
+
+            viewer.setRole(UserRole.VIEWER);
+
+            viewer.setStatus(Status.ACTIVE);
+
+            userRepository.save(viewer);
         }
     }
 }
