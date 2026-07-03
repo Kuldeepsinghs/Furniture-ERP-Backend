@@ -4,6 +4,7 @@ import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
 
 import com.furniture.FurnitureManagement.entity.User;
+import com.furniture.FurnitureManagement.enums.Status;
 import com.furniture.FurnitureManagement.repository.UserRepository;
 
 @Service
@@ -31,6 +32,12 @@ public class CustomUserDetailsService
                 .orElseThrow(() ->
                         new UsernameNotFoundException(
                                 "User not found"));
+
+        if (user.getStatus() != Status.ACTIVE) {
+
+            throw new UsernameNotFoundException(
+                    "User is inactive");
+        }
 
         return org.springframework.security.core.userdetails
                 .User

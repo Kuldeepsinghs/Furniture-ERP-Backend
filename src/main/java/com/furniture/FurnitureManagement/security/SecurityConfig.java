@@ -65,6 +65,12 @@ public class SecurityConfig {
 		                        .permitAll()
 
 		                        .requestMatchers(
+		                                "/sales/**")
+		                        .hasAnyRole(
+		                                "ADMIN",
+		                                "SALES")
+
+		                        .requestMatchers(
 		                                HttpMethod.GET,
 		                                "/workers/**")
 		                        .hasAnyRole(
@@ -73,6 +79,21 @@ public class SecurityConfig {
 		
 		                        .requestMatchers(
 		                                HttpMethod.POST,
+		                                "/workers/**")
+		                        .hasRole("ADMIN")
+
+		                        .requestMatchers(
+		                                HttpMethod.PUT,
+		                                "/workers/**")
+		                        .hasRole("ADMIN")
+
+		                        .requestMatchers(
+		                                HttpMethod.PATCH,
+		                                "/workers/**")
+		                        .hasRole("ADMIN")
+
+		                        .requestMatchers(
+		                                HttpMethod.DELETE,
 		                                "/workers/**")
 		                        .hasRole("ADMIN")
 
@@ -86,6 +107,16 @@ public class SecurityConfig {
 
 		                        .requestMatchers(
 		                                HttpMethod.POST,
+		                                "/categories/**")
+		                        .hasRole("ADMIN")
+
+		                        .requestMatchers(
+		                                HttpMethod.PUT,
+		                                "/categories/**")
+		                        .hasRole("ADMIN")
+
+		                        .requestMatchers(
+		                                HttpMethod.DELETE,
 		                                "/categories/**")
 		                        .hasRole("ADMIN")
 		                        
@@ -100,6 +131,16 @@ public class SecurityConfig {
 		                        
 		                        .requestMatchers(
 		                                HttpMethod.POST,
+		                                "/designs/**")
+		                        .hasRole("ADMIN")
+
+		                        .requestMatchers(
+		                                HttpMethod.PUT,
+		                                "/designs/**")
+		                        .hasRole("ADMIN")
+
+		                        .requestMatchers(
+		                                HttpMethod.DELETE,
 		                                "/designs/**")
 		                        .hasRole("ADMIN")
 		                        
@@ -113,6 +154,16 @@ public class SecurityConfig {
 
 		                        .requestMatchers(
 		                                HttpMethod.POST,
+		                                "/rate-types/**")
+		                        .hasRole("ADMIN")
+
+		                        .requestMatchers(
+		                                HttpMethod.PUT,
+		                                "/rate-types/**")
+		                        .hasRole("ADMIN")
+
+		                        .requestMatchers(
+		                                HttpMethod.DELETE,
 		                                "/rate-types/**")
 		                        .hasRole("ADMIN")
 		                        
@@ -126,6 +177,11 @@ public class SecurityConfig {
 
 		                        .requestMatchers(
 		                                HttpMethod.POST,
+		                                "/product-rates/**")
+		                        .hasRole("ADMIN")
+
+		                        .requestMatchers(
+		                                HttpMethod.DELETE,
 		                                "/product-rates/**")
 		                        .hasRole("ADMIN")
 		                        
@@ -139,6 +195,11 @@ public class SecurityConfig {
 
 		                        .requestMatchers(
 		                                HttpMethod.POST,
+		                                "/work-entries/**")
+		                        .hasRole("ADMIN")
+
+		                        .requestMatchers(
+		                                HttpMethod.PATCH,
 		                                "/work-entries/**")
 		                        .hasRole("ADMIN")
 		                        
@@ -152,6 +213,11 @@ public class SecurityConfig {
 
 		                        .requestMatchers(
 		                                HttpMethod.POST,
+		                                "/payments/**")
+		                        .hasRole("ADMIN")
+
+		                        .requestMatchers(
+		                                HttpMethod.PATCH,
 		                                "/payments/**")
 		                        .hasRole("ADMIN")
 		                        
@@ -165,6 +231,16 @@ public class SecurityConfig {
 
 		                        .requestMatchers(
 		                                HttpMethod.POST,
+		                                "/showrooms/**")
+		                        .hasRole("ADMIN")
+
+		                        .requestMatchers(
+		                                HttpMethod.PUT,
+		                                "/showrooms/**")
+		                        .hasRole("ADMIN")
+
+		                        .requestMatchers(
+		                                HttpMethod.DELETE,
 		                                "/showrooms/**")
 		                        .hasRole("ADMIN")
 		                        
@@ -187,10 +263,16 @@ public class SecurityConfig {
 		                                HttpMethod.POST,
 		                                "/shipments/**")
 		                        .hasRole("ADMIN")
+
+		                        .requestMatchers(
+		                                HttpMethod.PUT,
+		                                "/shipments/**")
+		                        .hasRole("ADMIN")
 		                        
 		                        
 		                        .requestMatchers(
 		                                HttpMethod.GET,
+		                                "/dashboard",
 		                                "/dashboard/**")
 		                        .hasAnyRole(
 		                                        "ADMIN",
@@ -220,7 +302,7 @@ public class SecurityConfig {
 		                        
 		                        
                                 .anyRequest()
-                                .authenticated())
+                                .denyAll())
 
                 .addFilterBefore(
                         jwtAuthenticationFilter,

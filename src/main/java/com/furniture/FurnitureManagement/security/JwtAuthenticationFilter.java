@@ -1,8 +1,10 @@
 package com.furniture.FurnitureManagement.security;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -77,11 +79,19 @@ public class JwtAuthenticationFilter
                     token,
                     userDetails.getUsername())) {
 
+                List<SimpleGrantedAuthority> authorities =
+                        jwtService.extractRoles(token)
+                        .stream()
+                        .map(SimpleGrantedAuthority::new)
+                        .toList();
+
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails,
                                 null,
-                                userDetails.getAuthorities());
+                                authorities.isEmpty()
+                                ? userDetails.getAuthorities()
+                                : authorities);
 
                 authToken.setDetails(
                         new WebAuthenticationDetailsSource()
