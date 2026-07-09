@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.furniture.FurnitureManagement.dto.WorkerClearDataResponse;
 import com.furniture.FurnitureManagement.dto.WorkerLedgerResponse;
 import com.furniture.FurnitureManagement.dto.WorkerRequest;
 import com.furniture.FurnitureManagement.dto.WorkerStatementResponse;
@@ -214,6 +215,41 @@ public class WorkerService {
     }
     
     
+   
+    public WorkerClearDataResponse
+    clearWorkerData(Long id) {
+
+        Worker worker =
+                workerRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Worker not found"));
+
+        List<WorkEntry> workEntries =
+                workEntryRepository.findByWorker(
+                        worker);
+
+        List<Payment> payments =
+                paymentRepository.findByWorker(
+                        worker);
+
+        int deletedEntries = workEntries.size();
+        int deletedPayments = payments.size();
+
+        workEntryRepository.deleteAll(
+                workEntries);
+
+        paymentRepository.deleteAll(
+                payments);
+
+        return new WorkerClearDataResponse(
+                worker.getId(),
+                worker.getName(),
+                deletedEntries,
+                deletedPayments);
+    }
+
+
     public WorkerStatementResponse
     getWorkerStatement(
             Long workerId) {

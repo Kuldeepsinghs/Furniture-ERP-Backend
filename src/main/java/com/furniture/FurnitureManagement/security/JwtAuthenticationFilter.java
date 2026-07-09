@@ -3,6 +3,8 @@ package com.furniture.FurnitureManagement.security;
 import java.io.IOException;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -12,6 +14,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +23,9 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class JwtAuthenticationFilter
         extends OncePerRequestFilter {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private final JwtService jwtService;
 
@@ -61,47 +67,66 @@ public class JwtAuthenticationFilter
         String token =
                 authHeader.substring(7);
 
-        String username =
-                jwtService.extractUsername(
-                        token);
+        try {
 
-        if (username != null
-                && SecurityContextHolder
-                .getContext()
-                .getAuthentication() == null) {
+            String username =
+                    jwtService.extractUsername(
+                            token);
 
-            UserDetails userDetails =
-                    userDetailsService
-                    .loadUserByUsername(
-                            username);
+            if (username != null
+                    && SecurityContextHolder
+                    .getContext()
+                    .getAuthentication() == null) {
 
-            if (jwtService.validateToken(
-                    token,
-                    userDetails.getUsername())) {
+                UserDetails userDetails =
+                        userDetailsService
+                        .loadUserByUsername(
+                                username);
 
-                List<SimpleGrantedAuthority> authorities =
-                        jwtService.extractRoles(token)
-                        .stream()
-                        .map(SimpleGrantedAuthority::new)
-                        .toList();
+                if (jwtService.validateToken(
+                        token,
+                        userDetails.getUsername())) {
 
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                authorities.isEmpty()
-                                ? userDetails.getAuthorities()
-                                : authorities);
+                    List<SimpleGrantedAuthority> authorities =
+                            jwtService.extractRoles(token)
+                            .stream()
+                            .map(SimpleGrantedAuthority::new)
+                            .toList();
 
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource()
-                                .buildDetails(request));
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    authorities.isEmpty()
+                                    ? userDetails.getAuthorities()
+                                    : authorities);
 
-                SecurityContextHolder
-                        .getContext()
-                        .setAuthentication(
-                                authToken);
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource()
+                                    .buildDetails(request));
+
+                    SecurityContextHolder
+                            .getContext()
+                            .setAuthentication(
+                                    authToken);
+                }
             }
+
+        } catch (JwtException | IllegalArgumentException ex) {
+
+            // An expired, malformed, or otherwise invalid token should
+            // just be treated as "not authenticated" - it must NOT crash
+            // the request. Letting this propagate uncaught used to produce
+            // a bare 403 "Access Denied" for ANY request (including
+            // /auth/login, since the frontend always attaches whatever
+            // token happens to be in storage) whenever an old token was
+            // still saved in the browser.
+            log.warn(
+                    "Ignoring invalid/expired JWT on {}: {}",
+                    request.getRequestURI(),
+                    ex.getMessage());
+
+            SecurityContextHolder.clearContext();
         }
 
         filterChain.doFilter(
