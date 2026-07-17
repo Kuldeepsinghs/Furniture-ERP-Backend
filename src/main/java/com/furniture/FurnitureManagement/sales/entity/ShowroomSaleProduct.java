@@ -11,6 +11,9 @@ public class ShowroomSaleProduct {
     @Column(nullable = false)
     private String productName;
 
+    @Column
+    private String category;
+
     @Column(nullable = false)
     private Integer quantity;
 
@@ -24,6 +27,15 @@ public class ShowroomSaleProduct {
     public void setProductName(
             String productName) {
         this.productName = productName;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(
+            String category) {
+        this.category = category;
     }
 
     public Integer getQuantity() {

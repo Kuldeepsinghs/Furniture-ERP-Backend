@@ -12,6 +12,9 @@ public class ShowroomSaleProductRequest {
     @NotBlank(message = "Product Name is required")
     private String productName;
 
+    @NotBlank(message = "Category is required")
+    private String category;
+
     @NotNull(message = "Quantity is required")
     @Min(value = 1, message = "Quantity must be greater than 0")
     private Integer quantity;
@@ -27,6 +30,15 @@ public class ShowroomSaleProductRequest {
     public void setProductName(
             String productName) {
         this.productName = productName;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(
+            String category) {
+        this.category = category;
     }
 
     public Integer getQuantity() {

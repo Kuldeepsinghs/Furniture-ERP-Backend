@@ -6,6 +6,8 @@ public class ShowroomSaleProductResponse {
 
     private String productName;
 
+    private String category;
+
     private Integer quantity;
 
     private BigDecimal price;
@@ -14,11 +16,13 @@ public class ShowroomSaleProductResponse {
 
     public ShowroomSaleProductResponse(
             String productName,
+            String category,
             Integer quantity,
             BigDecimal price,
             BigDecimal lineTotal) {
 
         this.productName = productName;
+        this.category = category;
         this.quantity = quantity;
         this.price = price;
         this.lineTotal = lineTotal;
@@ -26,6 +30,10 @@ public class ShowroomSaleProductResponse {
 
     public String getProductName() {
         return productName;
+    }
+
+    public String getCategory() {
+        return category;
     }
 
     public Integer getQuantity() {

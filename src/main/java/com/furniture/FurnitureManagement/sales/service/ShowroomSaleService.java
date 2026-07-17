@@ -395,10 +395,16 @@ public class ShowroomSaleService {
             LocalDate exclusiveEndDate,
             int limit) {
 
-        return repository.getTopCategoriesBetween(
-                startDate.atStartOfDay(),
-                exclusiveEndDate.atStartOfDay(),
-                PageRequest.of(0, limit));
+        return repository.getTopProductCategoriesBetween(
+                        startDate.atStartOfDay(),
+                        exclusiveEndDate.atStartOfDay(),
+                        PageRequest.of(0, limit))
+                .stream()
+                .map(row ->
+                        new SalesGroupAmountResponse(
+                                row.getLabel(),
+                                row.getAmount()))
+                .toList();
     }
 
     private List<SalesGroupAmountResponse> topLocationsBetween(
@@ -434,11 +440,6 @@ public class ShowroomSaleService {
             ShowroomSale sale,
             ShowroomSaleRequest request) {
 
-        sale.setCategory(
-                trimRequired(
-                        request.getCategory(),
-                        "Category is required"));
-
         sale.setLocation(
                 trimRequired(
                         request.getLocation(),
@@ -463,6 +464,13 @@ public class ShowroomSaleService {
 
         sale.setProducts(products);
 
+        // Sale-level category is now a derived summary of its product
+        // lines' categories (e.g. "Sofa, Cot"), rather than a single
+        // manually-entered value - each product line carries its own real
+        // category for accurate reporting.
+        sale.setCategory(
+                deriveCategorySummary(products));
+
         sale.setDescription(
                 buildDescription(
                         sale,
@@ -474,6 +482,20 @@ public class ShowroomSaleService {
                 : LocalDateTime.now());
     }
 
+    private String deriveCategorySummary(
+            List<ShowroomSaleProduct> products) {
+
+        return products.stream()
+                .map(ShowroomSaleProduct::getCategory)
+                .filter(category ->
+                        category != null
+                        && !category.isBlank())
+                .map(String::trim)
+                .distinct()
+                .reduce((a, b) -> a + ", " + b)
+                .orElse("Uncategorized");
+    }
+
     private ShowroomSaleResponse toResponse(
             ShowroomSale sale) {
 
@@ -483,6 +505,7 @@ public class ShowroomSaleService {
                 .map(product ->
                         new ShowroomSaleProductResponse(
                                 product.getProductName(),
+                                product.getCategory(),
                                 product.getQuantity(),
                                 product.getPrice(),
                                 calculateLineTotal(product)))
@@ -555,6 +578,10 @@ public class ShowroomSaleService {
                         request.getDescription())
                 : request.getCategory());
 
+        legacyProduct.setCategory(
+                trimToNull(
+                        request.getCategory()));
+
         legacyProduct.setQuantity(1);
 
         legacyProduct.setPrice(
@@ -573,6 +600,11 @@ public class ShowroomSaleService {
                 trimRequired(
                         request.getProductName(),
                         "Product Name is required"));
+
+        product.setCategory(
+                trimRequired(
+                        request.getCategory(),
+                        "Category is required"));
 
         if (request.getQuantity() == null
                 || request.getQuantity() < 1) {

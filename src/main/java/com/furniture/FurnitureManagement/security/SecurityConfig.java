@@ -103,7 +103,8 @@ public class SecurityConfig {
 		                                "/categories/**")
 		                        .hasAnyRole(
 		                                "ADMIN",
-		                                "VIEWER")
+		                                "VIEWER",
+		                                "SALES")
 
 		                        .requestMatchers(
 		                                HttpMethod.POST,

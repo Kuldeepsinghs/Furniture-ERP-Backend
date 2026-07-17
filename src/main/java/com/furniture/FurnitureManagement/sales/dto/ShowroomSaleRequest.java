@@ -9,7 +9,10 @@ import jakarta.validation.constraints.NotBlank;
 
 public class ShowroomSaleRequest {
 
-    @NotBlank(message = "Category is required")
+    // No longer required from the client - each product line now carries its
+    // own category. This is kept only as a legacy fallback for the
+    // no-products/total-amount-only path, and is otherwise auto-derived
+    // from the product lines when the sale is saved.
     private String category;
 
     @NotBlank(message = "Location is required")
