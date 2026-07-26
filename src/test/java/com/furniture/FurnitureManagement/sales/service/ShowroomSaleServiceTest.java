@@ -25,13 +25,16 @@ class ShowroomSaleServiceTest {
     @Mock
     private ShowroomSaleRepository repository;
 
+    @Mock
+    private SaleNotificationService notificationService;
+
     private ShowroomSaleService service;
 
     @BeforeEach
     void setUp() {
 
         service =
-                new ShowroomSaleService(repository);
+                new ShowroomSaleService(repository, notificationService);
 
         when(repository.save(any(ShowroomSale.class)))
                 .thenAnswer(invocation ->
@@ -53,10 +56,12 @@ class ShowroomSaleServiceTest {
                 List.of(
                         product(
                                 "Bed",
+                                "Bedroom",
                                 2,
                                 "15000"),
                         product(
                                 "Side Table",
+                                "Bedroom",
                                 1,
                                 "4500")));
 
@@ -110,6 +115,7 @@ class ShowroomSaleServiceTest {
 
     private ShowroomSaleProductRequest product(
             String name,
+            String category,
             int quantity,
             String price) {
 
@@ -117,6 +123,7 @@ class ShowroomSaleServiceTest {
                 new ShowroomSaleProductRequest();
 
         product.setProductName(name);
+        product.setCategory(category);
         product.setQuantity(quantity);
         product.setPrice(
                 new BigDecimal(price));
