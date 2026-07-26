@@ -34,12 +34,16 @@ import jakarta.persistence.criteria.Predicate;
 @Service
 public class ShowroomSaleService {
 
-    private final ShowroomSaleRepository repository;
+	private final ShowroomSaleRepository repository;
+
+    private final SaleNotificationService notificationService;
 
     public ShowroomSaleService(
-            ShowroomSaleRepository repository) {
+            ShowroomSaleRepository repository,
+            SaleNotificationService notificationService) {
 
         this.repository = repository;
+        this.notificationService = notificationService;
     }
 
     public ShowroomSaleResponse createSale(
@@ -58,8 +62,13 @@ public class ShowroomSaleService {
         sale.setStatus(
                 SaleStatus.ACTIVE);
 
-        return toResponse(
-                repository.save(sale));
+        ShowroomSaleResponse response =
+                toResponse(
+                        repository.save(sale));
+
+        notificationService.notifyNewSale(response);
+
+        return response;
     }
 
     public ShowroomSaleResponse updateSale(
@@ -774,4 +783,4 @@ public class ShowroomSaleService {
             return null;
         }
     }
-}
+}	
