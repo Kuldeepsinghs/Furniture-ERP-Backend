@@ -52,6 +52,14 @@ import com.furniture.FurnitureManagement.service.WorkEntryService;
 	        return service
 	        		.getReadyItems();
 	    }
+
+	    @GetMapping("/available-batches")
+	    public List<WorkEntry>
+	    getAvailableBatches() {
+
+	        return service
+	        		.getAvailableBatches();
+	    }
 	    
 	    @PutMapping("/{id}")
 	    public WorkEntry updateWorkEntry(

@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.springframework.web.bind.annotation.*;
 
-import com.furniture.FurnitureManagement.entity.ReadyStock;
+import com.furniture.FurnitureManagement.dto.ReadyStockBatchResponse;
 import com.furniture.FurnitureManagement.service.ReadyStockService;
 
 @RestController
@@ -21,8 +21,10 @@ public class ReadyStockController {
                 readyStockService;
     }
 
+    // Returns one row per worker's batch (design + worker + remaining qty),
+    // so the UI can show exactly who made what is currently in stock.
     @GetMapping
-    public List<ReadyStock>
+    public List<ReadyStockBatchResponse>
     getAllReadyStock() {
 
         return readyStockService

@@ -11,13 +11,10 @@ import com.furniture.FurnitureManagement.dto.ShipmentItemDetailResponse;
 import com.furniture.FurnitureManagement.dto.ShipmentItemRequest;
 import com.furniture.FurnitureManagement.dto.ShipmentRequest;
 import com.furniture.FurnitureManagement.dto.ShowroomShipmentResponse;
-import com.furniture.FurnitureManagement.entity.ProductDesign;
-import com.furniture.FurnitureManagement.entity.ReadyStock;
 import com.furniture.FurnitureManagement.entity.Shipment;
 import com.furniture.FurnitureManagement.entity.ShipmentItem;
 import com.furniture.FurnitureManagement.entity.Showroom;
-import com.furniture.FurnitureManagement.repository.ProductDesignRepository;
-import com.furniture.FurnitureManagement.repository.ReadyStockRepository;
+import com.furniture.FurnitureManagement.entity.WorkEntry;
 import com.furniture.FurnitureManagement.repository.ShipmentItemRepository;
 import com.furniture.FurnitureManagement.repository.ShipmentRepository;
 import com.furniture.FurnitureManagement.repository.ShowroomRepository;
@@ -31,32 +28,37 @@ public class ShipmentService {
 
     private final ShowroomRepository showroomRepository;
 
-    private final ProductDesignRepository designRepository;
-
-    private final ReadyStockRepository readyStockRepository;
+    private final WorkEntryService workEntryService;
 
     public ShipmentService(
             ShipmentRepository shipmentRepository,
             ShipmentItemRepository shipmentItemRepository,
             ShowroomRepository showroomRepository,
-            ProductDesignRepository designRepository,
-            ReadyStockRepository readyStockRepository) {
+            WorkEntryService workEntryService) {
 
         this.shipmentRepository = shipmentRepository;
         this.shipmentItemRepository = shipmentItemRepository;
         this.showroomRepository = showroomRepository;
-        this.designRepository = designRepository;
-        this.readyStockRepository = readyStockRepository;
+        this.workEntryService = workEntryService;
     }
 
     public Shipment createShipment(
             ShipmentRequest request) {
 
+        if (request.getItems() == null
+                || request.getItems().isEmpty()) {
+
+            throw new RuntimeException(
+                    "Shipment must include at least one item");
+        }
+
         Showroom showroom =
                 showroomRepository
                 .findById(
                         request.getShowroomId())
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Showroom not found"));
 
         Shipment shipment =
                 new Shipment();
@@ -76,31 +78,25 @@ public class ShipmentService {
         for (ShipmentItemRequest itemRequest
                 : request.getItems()) {
 
-            ProductDesign design =
-                    designRepository
-                    .findById(
-                            itemRequest.getDesignId())
-                    .orElseThrow();
-
-            ReadyStock stock =
-                    readyStockRepository
-                    .findByDesign(design)
-                    .orElseThrow();
-
-            if (stock.getAvailableQuantity()
-                    < itemRequest.getQuantity()) {
+            if (itemRequest.getWorkEntryId() == null) {
 
                 throw new RuntimeException(
-                        "Insufficient stock for "
-                                + design.getDesignName());
+                        "Each shipment item must reference a ready stock batch");
             }
 
-            stock.setAvailableQuantity(
-                    stock.getAvailableQuantity()
-                    - itemRequest.getQuantity());
+            if (itemRequest.getQuantity() == null
+                    || itemRequest.getQuantity() <= 0) {
 
-            readyStockRepository.save(
-                    stock);
+                throw new RuntimeException(
+                        "Shipment item quantity must be greater than 0");
+            }
+
+            // Deducts from this exact worker's batch and updates its
+            // shipment status (READY / PARTIALLY_SHIPPED / SHIPPED).
+            WorkEntry batch =
+                    workEntryService.shipQuantityFromWorkEntry(
+                            itemRequest.getWorkEntryId(),
+                            itemRequest.getQuantity());
 
             ShipmentItem shipmentItem =
                     new ShipmentItem();
@@ -109,7 +105,10 @@ public class ShipmentService {
                     savedShipment);
 
             shipmentItem.setDesign(
-                    design);
+                    batch.getDesign());
+
+            shipmentItem.setWorkEntry(
+                    batch);
 
             shipmentItem.setQuantity(
                     itemRequest.getQuantity());
@@ -148,27 +147,8 @@ public class ShipmentService {
 
         for (Shipment shipment : shipments) {
 
-            List<ShipmentItem> items =
-                    shipmentItemRepository
-                    .findByShipmentId(
-                            shipment.getId());
-
-            List<ShipmentItemDetailResponse>
-                    itemResponses =
-                    new ArrayList<>();
-
-            for (ShipmentItem item : items) {
-
-                itemResponses.add(
-
-                        new ShipmentItemDetailResponse(
-
-                                item.getDesign()
-                                        .getDesignName(),
-
-                                item.getQuantity()));
-            }
-            
+            List<ShipmentItemDetailResponse> itemResponses =
+                    buildItemResponses(shipment);
 
             response.add(
 
@@ -197,26 +177,8 @@ public class ShipmentService {
 
         for (Shipment shipment : shipments) {
 
-            List<ShipmentItem> items =
-                    shipmentItemRepository
-                    .findByShipmentId(
-                            shipment.getId());
-
-            List<ShipmentItemDetailResponse>
-                    itemResponses =
-                    new ArrayList<>();
-
-            for (ShipmentItem item : items) {
-
-                itemResponses.add(
-
-                        new ShipmentItemDetailResponse(
-
-                                item.getDesign()
-                                        .getDesignName(),
-
-                                item.getQuantity()));
-            }
+            List<ShipmentItemDetailResponse> itemResponses =
+                    buildItemResponses(shipment);
 
             response.add(
 
@@ -235,6 +197,63 @@ public class ShipmentService {
         }
 
         return response;
+    }
+
+    private List<ShipmentItemDetailResponse> buildItemResponses(
+            Shipment shipment) {
+
+        List<ShipmentItem> items =
+                shipmentItemRepository
+                .findByShipmentId(
+                        shipment.getId());
+
+        List<ShipmentItemDetailResponse> itemResponses =
+                new ArrayList<>();
+
+        for (ShipmentItem item : items) {
+
+            WorkEntry batch = item.getWorkEntry();
+
+            if (batch != null) {
+
+                itemResponses.add(
+
+                        new ShipmentItemDetailResponse(
+
+                                item.getDesign()
+                                        .getDesignName(),
+
+                                item.getQuantity(),
+
+                                batch.getId(),
+
+                                batch.getWorker().getId(),
+
+                                batch.getWorker().getName(),
+
+                                batch.getWorker().getRole() != null
+                                        ? batch.getWorker().getRole().name()
+                                        : null,
+
+                                batch.getFinishType() != null
+                                        ? batch.getFinishType().name()
+                                        : null));
+
+            } else {
+
+                // Legacy shipment item created before batch tracking existed
+                itemResponses.add(
+
+                        new ShipmentItemDetailResponse(
+
+                                item.getDesign()
+                                        .getDesignName(),
+
+                                item.getQuantity()));
+            }
+        }
+
+        return itemResponses;
     }
 
     public Shipment updateRemarks(

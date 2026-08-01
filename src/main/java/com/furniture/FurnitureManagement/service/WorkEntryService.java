@@ -10,7 +10,6 @@ import com.furniture.FurnitureManagement.dto.WorkEntryRequest;
 import com.furniture.FurnitureManagement.entity.ProductDesign;
 import com.furniture.FurnitureManagement.entity.ProductRate;
 import com.furniture.FurnitureManagement.entity.RateType;
-import com.furniture.FurnitureManagement.entity.ReadyStock;
 import com.furniture.FurnitureManagement.entity.WorkEntry;
 import com.furniture.FurnitureManagement.entity.Worker;
 import com.furniture.FurnitureManagement.enums.FinishType;
@@ -19,7 +18,6 @@ import com.furniture.FurnitureManagement.enums.WorkerRole;
 import com.furniture.FurnitureManagement.repository.ProductDesignRepository;
 import com.furniture.FurnitureManagement.repository.ProductRateRepository;
 import com.furniture.FurnitureManagement.repository.RateTypeRepository;
-import com.furniture.FurnitureManagement.repository.ReadyStockRepository;
 import com.furniture.FurnitureManagement.repository.WorkEntryRepository;
 import com.furniture.FurnitureManagement.repository.WorkerRepository;
 
@@ -36,22 +34,18 @@ public class WorkEntryService {
 
     private final ProductRateRepository productRateRepository;
 
-    private final ReadyStockRepository readyStockRepository;
-
     public WorkEntryService(
             WorkEntryRepository workEntryRepository,
             WorkerRepository workerRepository,
             ProductDesignRepository designRepository,
             RateTypeRepository rateTypeRepository,
-            ProductRateRepository productRateRepository,
-            ReadyStockRepository readyStockRepository) {
+            ProductRateRepository productRateRepository) {
 
         this.workEntryRepository = workEntryRepository;
         this.workerRepository = workerRepository;
         this.designRepository = designRepository;
         this.rateTypeRepository = rateTypeRepository;
         this.productRateRepository = productRateRepository;
-        this.readyStockRepository = readyStockRepository;
     }
 
     public WorkEntry addWorkEntry(
@@ -135,6 +129,9 @@ public class WorkEntryService {
 
             entry.setShipmentStatus(
                     ShipmentStatus.READY);
+
+            entry.setRemainingQuantity(
+                    quantity);
         }
 
         entry.setRemarks(
@@ -164,14 +161,6 @@ public class WorkEntryService {
                 workEntryRepository
                 .save(entry);
 
-        if (worker.getRole()
-                == WorkerRole.POLISHER) {
-
-            adjustReadyStock(
-                    design,
-                    quantity);
-        }
-
         return savedEntry;
     }
 
@@ -186,6 +175,17 @@ public class WorkEntryService {
         return workEntryRepository
                 .findByShipmentStatusAndCancelledFalse(
                         ShipmentStatus.READY);
+    }
+
+    /**
+     * All batches (READY or PARTIALLY_SHIPPED) that still have quantity
+     * left to ship, each tagged with the worker who made it. This is the
+     * real "ready stock" data - one row per worker's batch.
+     */
+    public List<WorkEntry> getAvailableBatches() {
+
+        return workEntryRepository
+                .findAllAvailableBatches();
     }
     
     public WorkEntry updateWorkEntry(
@@ -290,12 +290,89 @@ public class WorkEntryService {
         if (entry.getWorker().getRole()
                 == WorkerRole.POLISHER) {
 
-            adjustReadyStock(
-                    entry.getDesign(),
-                    newQuantity - oldQuantity);
+            int oldRemaining =
+                    entry.getRemainingQuantity() != null
+                    ? entry.getRemainingQuantity()
+                    : oldQuantity;
+
+            int alreadyShipped =
+                    Math.max(
+                            oldQuantity - oldRemaining,
+                            0);
+
+            int newRemaining =
+                    Math.max(
+                            newQuantity - alreadyShipped,
+                            0);
+
+            entry.setRemainingQuantity(
+                    newRemaining);
+
+            entry.setShipmentStatus(
+                    newRemaining == 0
+                    ? ShipmentStatus.SHIPPED
+                    : newRemaining == newQuantity
+                    ? ShipmentStatus.READY
+                    : ShipmentStatus.PARTIALLY_SHIPPED);
+
+            savedEntry =
+                    workEntryRepository
+                    .save(entry);
         }
 
         return savedEntry;
+    }
+
+    /**
+     * Deducts the given quantity from a specific worker's ready-stock batch
+     * (WorkEntry) when that batch is chosen for a shipment. This is what
+     * links a shipment back to the exact worker who made the item.
+     */
+    public WorkEntry shipQuantityFromWorkEntry(
+            Long workEntryId,
+            int shipQuantity) {
+
+        WorkEntry entry =
+                workEntryRepository
+                .findById(workEntryId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Work Entry not found"));
+
+        if (entry.isCancelled()) {
+
+            throw new RuntimeException(
+                    "Cannot ship from a cancelled work entry");
+        }
+
+        Integer remaining = entry.getRemainingQuantity();
+
+        if (remaining == null
+                || shipQuantity <= 0
+                || shipQuantity > remaining) {
+
+            throw new RuntimeException(
+                    "Insufficient ready stock in batch #"
+                            + entry.getId()
+                            + " for "
+                            + entry.getDesign().getDesignName()
+                            + " (worker: "
+                            + entry.getWorker().getName()
+                            + ")");
+        }
+
+        int newRemaining = remaining - shipQuantity;
+
+        entry.setRemainingQuantity(newRemaining);
+
+        entry.setShipmentStatus(
+                newRemaining == 0
+                ? ShipmentStatus.SHIPPED
+                : newRemaining == entry.getQuantity()
+                ? ShipmentStatus.READY
+                : ShipmentStatus.PARTIALLY_SHIPPED);
+
+        return workEntryRepository.save(entry);
     }
 
     public WorkEntry cancelWorkEntry(
@@ -318,50 +395,17 @@ public class WorkEntryService {
         if (entry.getWorker().getRole()
                 == WorkerRole.POLISHER) {
 
-            adjustReadyStock(
-                    entry.getDesign(),
-                    -entry.getQuantity());
+            // Only the still-unshipped part of this batch is removed from
+            // future availability. Whatever has already shipped stays
+            // correctly recorded on those past shipments regardless.
+            entry.setRemainingQuantity(0);
+
+            entry.setShipmentStatus(
+                    ShipmentStatus.SHIPPED);
         }
 
         return workEntryRepository
                 .save(entry);
-    }
-
-    private ReadyStock adjustReadyStock(
-            ProductDesign design,
-            int quantityDelta) {
-
-        ReadyStock readyStock =
-                readyStockRepository
-                .findByDesign(design)
-                .orElseGet(() -> {
-
-                    ReadyStock stock =
-                            new ReadyStock();
-
-                    stock.setDesign(
-                            design);
-
-                    stock.setAvailableQuantity(
-                            0);
-
-                    return stock;
-                });
-
-        int newQuantity =
-                readyStock.getAvailableQuantity()
-                + quantityDelta;
-
-        readyStock.setAvailableQuantity(
-                Math.max(
-                        newQuantity,
-                        0));
-
-        readyStock.setLastUpdated(
-                LocalDateTime.now());
-
-        return readyStockRepository
-                .save(readyStock);
     }
 
     private BigDecimal calculateUnitRate(

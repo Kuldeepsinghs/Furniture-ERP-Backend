@@ -3,8 +3,8 @@ package com.furniture.FurnitureManagement.entity;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-import com.furniture.FurnitureManagement.enums.ShipmentStatus;
 import com.furniture.FurnitureManagement.enums.FinishType;
+import com.furniture.FurnitureManagement.enums.ShipmentStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -67,6 +67,8 @@ public class WorkEntry {
     @Enumerated(EnumType.STRING)
     private ShipmentStatus shipmentStatus;
     
+    private Integer remainingQuantity;
+    
     private String remarks;
 
     private Boolean cancelled = false;
@@ -124,6 +126,14 @@ public class WorkEntry {
 
 	public void setShipmentStatus(ShipmentStatus shipmentStatus) {
 		this.shipmentStatus = shipmentStatus;
+	}
+	
+	public Integer getRemainingQuantity() {
+		return remainingQuantity;
+	}
+
+	public void setRemainingQuantity(Integer remainingQuantity) {
+		this.remainingQuantity = remainingQuantity;
 	}
 
 	public Long getId() {

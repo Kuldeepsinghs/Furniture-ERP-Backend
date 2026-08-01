@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import org.springframework.stereotype.Service;
 
 import com.furniture.FurnitureManagement.dto.DashboardResponse;
-import com.furniture.FurnitureManagement.repository.ReadyStockRepository;
 import com.furniture.FurnitureManagement.repository.ShipmentRepository;
 import com.furniture.FurnitureManagement.repository.ShowroomRepository;
 import com.furniture.FurnitureManagement.repository.PaymentRepository;
@@ -20,8 +19,6 @@ public class DashboardService {
 
     private final ShowroomRepository showroomRepository;
 
-    private final ReadyStockRepository readyStockRepository;
-
     private final ShipmentRepository shipmentRepository;
 
     private final WorkEntryRepository workEntryRepository;
@@ -31,7 +28,6 @@ public class DashboardService {
     public DashboardService(
             WorkerRepository workerRepository,
             ShowroomRepository showroomRepository,
-            ReadyStockRepository readyStockRepository,
             ShipmentRepository shipmentRepository,
             WorkEntryRepository workEntryRepository,
             PaymentRepository paymentRepository) {
@@ -41,9 +37,6 @@ public class DashboardService {
 
         this.showroomRepository =
                 showroomRepository;
-
-        this.readyStockRepository =
-                readyStockRepository;
 
         this.shipmentRepository =
                 shipmentRepository;
@@ -70,11 +63,13 @@ public class DashboardService {
 
                 showroomRepository.countByActiveTrue(),
 
-                readyStockRepository.count(),
+                (long) workEntryRepository
+                        .findDesignIdsWithAvailableBatches()
+                        .size(),
 
                 shipmentRepository.count(),
 
-                readyStockRepository.getTotalReadyStockQuantity(),
+                workEntryRepository.getTotalAvailableQuantity(),
 
                 totalEarnings,
 

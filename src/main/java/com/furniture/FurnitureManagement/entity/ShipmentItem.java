@@ -26,6 +26,15 @@ public class ShipmentItem {
     @Column(nullable = false)
     private Integer quantity;
 
+    // Links this shipped line back to the exact production batch (worker +
+    // work entry) it was fulfilled from. Nullable so existing/legacy shipment
+    // rows created before this feature keep working without a batch link.
+    @ManyToOne
+    @JoinColumn(
+            name = "work_entry_id",
+            nullable = true)
+    private WorkEntry workEntry;
+
 	public Long getId() {
 		return id;
 	}
@@ -56,6 +65,14 @@ public class ShipmentItem {
 
 	public void setQuantity(Integer quantity) {
 		this.quantity = quantity;
+	}
+
+	public WorkEntry getWorkEntry() {
+		return workEntry;
+	}
+
+	public void setWorkEntry(WorkEntry workEntry) {
+		this.workEntry = workEntry;
 	}
 
 }

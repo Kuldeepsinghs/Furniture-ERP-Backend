@@ -79,4 +79,41 @@ public interface WorkEntryRepository
 			""")
 			List<ProductionReportResponse>
 			getProductionReport();
+	
+	@Query("""
+	        SELECT w
+	        FROM WorkEntry w
+	        WHERE w.design.id = :designId
+	        AND w.remainingQuantity > 0
+	        AND (w.cancelled = false OR w.cancelled IS NULL)
+	        ORDER BY w.workDateTime ASC
+	        """)
+	List<WorkEntry> findAvailableBatchesByDesign(
+	        @Param("designId")
+	        Long designId);
+
+	@Query("""
+	        SELECT DISTINCT w.design.id
+	        FROM WorkEntry w
+	        WHERE w.remainingQuantity > 0
+	        AND (w.cancelled = false OR w.cancelled IS NULL)
+	        """)
+	List<Long> findDesignIdsWithAvailableBatches();
+
+	@Query("""
+	        SELECT w
+	        FROM WorkEntry w
+	        WHERE w.remainingQuantity > 0
+	        AND (w.cancelled = false OR w.cancelled IS NULL)
+	        ORDER BY w.workDateTime ASC
+	        """)
+	List<WorkEntry> findAllAvailableBatches();
+
+	@Query("""
+	        SELECT COALESCE(SUM(w.remainingQuantity),0)
+	        FROM WorkEntry w
+	        WHERE w.remainingQuantity > 0
+	        AND (w.cancelled = false OR w.cancelled IS NULL)
+	        """)
+	Long getTotalAvailableQuantity();
 }

@@ -2,16 +2,18 @@ package com.furniture.FurnitureManagement.dto;
 
 public class ShipmentItemRequest {
 
-    private Long designId;
+    // The specific production batch (WorkEntry) this shipment line is
+    // fulfilled from. This is what makes shipments traceable to a worker.
+    private Long workEntryId;
 
     private Integer quantity;
 
-	public Long getDesignId() {
-		return designId;
+	public Long getWorkEntryId() {
+		return workEntryId;
 	}
 
-	public void setDesignId(Long designId) {
-		this.designId = designId;
+	public void setWorkEntryId(Long workEntryId) {
+		this.workEntryId = workEntryId;
 	}
 
 	public Integer getQuantity() {
@@ -22,5 +24,5 @@ public class ShipmentItemRequest {
 		this.quantity = quantity;
 	}
 
-  
+
 }
